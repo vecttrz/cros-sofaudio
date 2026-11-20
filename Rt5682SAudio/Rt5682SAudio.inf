@@ -1,0 +1,70 @@
+;
+; Rt5682SAudio.inf
+;
+; Realtek RTL5682S Audio Codec & Jack Detection Driver for Windows 11
+; Chromebook Sound Open Firmware (SOF) Audio Subsystem
+;
+; Copyright (c) 2026. Licensed under the MIT License.
+;
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = MEDIA
+ClassGuid   = {4d36e96c-e325-11ce-bfc1-08002be10318}
+Provider    = %ProviderString%
+CatalogFile = Rt5682SAudio.cat
+DriverVer   = 11/20/2026,18.5.2.0
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+Rt5682SAudio.sys = 1,,
+
+; ================= Class Installation =================
+
+[Manufacturer]
+%ManufacturerString% = Standard,NTamd64.10.0...16299
+
+[Standard.NTamd64.10.0...16299]
+%Rt5682S.DeviceDesc% = Rt5682S_Device, ACPI\VEN_RTL&DEV_5682
+%Rt5682S.DeviceDesc% = Rt5682S_Device, ACPI\RTL5682
+%Rt5682S.DeviceDesc% = Rt5682S_Device, *RTL5682
+
+; ================= Device Installation =================
+
+[Rt5682S_Device.NT]
+CopyFiles = Rt5682S_Device.NT.CopyFiles
+
+[Rt5682S_Device.NT.CopyFiles]
+Rt5682SAudio.sys
+
+[Rt5682S_Device.NT.Services]
+AddService = Rt5682SAudio, 0x00000002, Rt5682S_Service_Inst
+
+[Rt5682S_Service_Inst]
+DisplayName    = %Rt5682S.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %13%\Rt5682SAudio.sys
+LoadOrderGroup = Extended Base
+
+[Rt5682S_Device.NT.Wdf]
+KmdfService = Rt5682SAudio, Rt5682S_wdfsect
+
+[Rt5682S_wdfsect]
+KmdfLibraryVersion = 1.33
+
+; ================= Strings =================
+
+[Strings]
+ProviderString      = "Chromebook Audio Open Source Project"
+ManufacturerString  = "Realtek Technology / Chrultrabook"
+DiskName            = "RTL5682S Audio Installation Disk"
+Rt5682S.DeviceDesc  = "Realtek RTL5682S Headset Audio Codec & Jack Detect"
+Rt5682S.SVCDESC     = "Realtek RT5682S Audio Driver Service"

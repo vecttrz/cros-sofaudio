@@ -1,0 +1,51 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rt1019Audio", "Rt1019Audio\Rt1019Audio.vcxproj", "{A89746A1-1019-4D21-B457-3C1019E00001}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rt5682SAudio", "Rt5682SAudio\Rt5682SAudio.vcxproj", "{88250002-5682-4B88-A882-5682BA882502}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CrosAudioTest", "CrosAudioTest\CrosAudioTest.vcxproj", "{4637B001-A120-4E1F-A882-C705A0D10001}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SklHdaudBus", "SklHdaudBus\SklHdaudBus.vcxproj", "{752A2CAE-3455-4D18-A184-8B34B22632CE}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CsAudioIntcsof", "CsAudioIntcsof\CsAudioIntcsof.vcxproj", "{836BA6D1-3FF7-4411-8BCD-469553452DCF}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CsAudioEndpointSwitcher", "CsAudioEndpointSwitcher\CsAudioEndpointSwitcher.vcxproj", "{9E25A001-A120-4E1F-B882-C705A0D10002}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A89746A1-1019-4D21-B457-3C1019E00001}.Debug|x64.ActiveCfg = Debug|x64
+		{A89746A1-1019-4D21-B457-3C1019E00001}.Debug|x64.Build.0 = Debug|x64
+		{A89746A1-1019-4D21-B457-3C1019E00001}.Release|x64.ActiveCfg = Release|x64
+		{A89746A1-1019-4D21-B457-3C1019E00001}.Release|x64.Build.0 = Release|x64
+		{88250002-5682-4B88-A882-5682BA882502}.Debug|x64.ActiveCfg = Debug|x64
+		{88250002-5682-4B88-A882-5682BA882502}.Debug|x64.Build.0 = Debug|x64
+		{88250002-5682-4B88-A882-5682BA882502}.Release|x64.ActiveCfg = Release|x64
+		{88250002-5682-4B88-A882-5682BA882502}.Release|x64.Build.0 = Release|x64
+		{4637B001-A120-4E1F-A882-C705A0D10001}.Debug|x64.ActiveCfg = Debug|x64
+		{4637B001-A120-4E1F-A882-C705A0D10001}.Debug|x64.Build.0 = Debug|x64
+		{4637B001-A120-4E1F-A882-C705A0D10001}.Release|x64.ActiveCfg = Release|x64
+		{4637B001-A120-4E1F-A882-C705A0D10001}.Release|x64.Build.0 = Release|x64
+		{752A2CAE-3455-4D18-A184-8B34B22632CE}.Debug|x64.ActiveCfg = Debug|x64
+		{752A2CAE-3455-4D18-A184-8B34B22632CE}.Debug|x64.Build.0 = Debug|x64
+		{752A2CAE-3455-4D18-A184-8B34B22632CE}.Release|x64.ActiveCfg = Release|x64
+		{752A2CAE-3455-4D18-A184-8B34B22632CE}.Release|x64.Build.0 = Release|x64
+		{836BA6D1-3FF7-4411-8BCD-469553452DCF}.Debug|x64.ActiveCfg = Debug|x64
+		{836BA6D1-3FF7-4411-8BCD-469553452DCF}.Debug|x64.Build.0 = Debug|x64
+		{836BA6D1-3FF7-4411-8BCD-469553452DCF}.Release|x64.ActiveCfg = Release|x64
+		{836BA6D1-3FF7-4411-8BCD-469553452DCF}.Release|x64.Build.0 = Release|x64
+		{9E25A001-A120-4E1F-B882-C705A0D10002}.Debug|x64.ActiveCfg = Debug|x64
+		{9E25A001-A120-4E1F-B882-C705A0D10002}.Debug|x64.Build.0 = Debug|x64
+		{9E25A001-A120-4E1F-B882-C705A0D10002}.Release|x64.ActiveCfg = Release|x64
+		{9E25A001-A120-4E1F-B882-C705A0D10002}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

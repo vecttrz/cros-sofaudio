@@ -1,0 +1,2 @@
+# Package SHA-256
+c250da65a7cf1dd35d43adca1665947971d0d1bba9f0523e8d50076cf8a746d8  cros-sofaudio-v1.3.4.zip

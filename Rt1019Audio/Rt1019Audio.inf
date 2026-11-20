@@ -1,0 +1,70 @@
+;
+; Rt1019Audio.inf
+;
+; Realtek RT1019 Smart Amplifier Driver for Windows 11
+; Chromebook Sound Open Firmware (SOF) Audio Subsystem
+;
+; Copyright (c) 2026. Licensed under the MIT License.
+;
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = MEDIA
+ClassGuid   = {4d36e96c-e325-11ce-bfc1-08002be10318}
+Provider    = %ProviderString%
+CatalogFile = Rt1019Audio.cat
+DriverVer   = 11/20/2026,18.4.0.0
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+Rt1019Audio.sys = 1,,
+
+; ================= Class Installation =================
+
+[Manufacturer]
+%ManufacturerString% = Standard,NTamd64.10.0...16299
+
+[Standard.NTamd64.10.0...16299]
+%Rt1019.DeviceDesc% = Rt1019_Device, ACPI\VEN_RTL&DEV_1019
+%Rt1019.DeviceDesc% = Rt1019_Device, ACPI\RTL1019
+%Rt1019.DeviceDesc% = Rt1019_Device, *RTL1019
+
+; ================= Device Installation =================
+
+[Rt1019_Device.NT]
+CopyFiles = Rt1019_Device.NT.CopyFiles
+
+[Rt1019_Device.NT.CopyFiles]
+Rt1019Audio.sys
+
+[Rt1019_Device.NT.Services]
+AddService = Rt1019Audio, 0x00000002, Rt1019_Service_Inst
+
+[Rt1019_Service_Inst]
+DisplayName    = %Rt1019.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %13%\Rt1019Audio.sys
+LoadOrderGroup = Extended Base
+
+[Rt1019_Device.NT.Wdf]
+KmdfService = Rt1019Audio, Rt1019_wdfsect
+
+[Rt1019_wdfsect]
+KmdfLibraryVersion = 1.33
+
+; ================= Strings =================
+
+[Strings]
+ProviderString      = "Chromebook Audio Open Source Project"
+ManufacturerString  = "Realtek Integrated / Chrultrabook"
+DiskName            = "RT1019 Audio Installation Disk"
+Rt1019.DeviceDesc = "Realtek Integrated RT1019 Smart Audio Amplifier"
+Rt1019.SVCDESC    = "Realtek RT1019 Audio Driver Service"

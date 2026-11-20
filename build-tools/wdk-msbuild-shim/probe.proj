@@ -1,0 +1,10 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Target Name="Probe">
+    <Message Importance="high" Text="ADDPATH=[$(AdditionalVCTargetsPath)]" />
+    <Message Importance="high" Text="CURRENT=[$(CurrentVCTargetsPath)]" />
+    <Message Importance="high" Text="ROOT=[$(_VCTargetsPathForToolset)]" />
+    <Message Importance="high" Text="FOUND=[$(_ToolsetFound)]" />
+  </Target>
+</Project>

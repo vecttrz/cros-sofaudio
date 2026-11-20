@@ -1,0 +1,8 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\..\cros-sofaudio-rtl\Rt1019Audio\Rt1019Audio.vcxproj" />
+  <Target Name="Probe2">
+    <Message Importance="high" Text="DRIVERTYPE=[$(DriverType)] KMINC=[$(KM_IncludePath)] KMDFINC=[$(KMDF_INC_PATH)]" />
+    <Message Importance="high" Text="INCLUDE=[$(IncludePath)]" />
+    <Message Importance="high" Text="LIB=[$(LibraryPath)]" />
+  </Target>
+</Project>
