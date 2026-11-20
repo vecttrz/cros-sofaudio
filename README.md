@@ -82,8 +82,8 @@ Four capture/render endpoints are exposed:
 
 | Endpoint | Flow | Source | Status |
 |---|---|---|---|
-| Speakers (*Altavoces*) | Render | SSP1 → RT1019P | Verified |
-| Headphones (*Auriculares*) | Render | SSP0 → RTL5682S | Verified |
+| Speakers | Render | SSP1 → RT1019P | Verified |
+| Headphones | Render | SSP0 → RTL5682S | Verified |
 | Microphone array | Capture | DMIC0 PDM array | Working; capture default |
 | Headset microphone | Capture | SSP0 → RTL5682S TRRS jack | Silent; visible for diagnosis |
 
