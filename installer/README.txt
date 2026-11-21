@@ -17,12 +17,31 @@ The installer checks the hardware and stops if it does not match.
 
 IMPORTANT REQUIREMENTS
 ----------------------
-The drivers are signed with a TEST certificate. Windows requires:
-  1. Secure Boot disabled in UEFI (if bcdedit rejects testsigning).
+These drivers are signed with a self-issued TEST certificate. They are NOT
+WHQL-certified by Microsoft. Official WHQL signing needs an EV code-signing
+certificate, a Microsoft Partner Center account, and paid validation; those
+recurring costs are outside the scope of this free project. Windows therefore
+loads the drivers only in Test Mode.
+
+Windows requires:
+  1. Secure Boot disabled in UEFI (Windows may reject testsigning otherwise).
   2. Windows Test Mode enabled (testsigning=on).
   3. Trust in ChromebookAudio.cer (the installer adds it).
 
-These are test drivers: they are NOT WHQL-certified by Microsoft.
+ENABLE TEST MODE MANUALLY
+-------------------------
+Install.cmd can do this when you answer Y. To do it yourself:
+  1. Disable Secure Boot in the UEFI firmware setup and keep it disabled.
+  2. Open Start, type cmd, right-click Command Prompt, and choose
+     "Run as administrator".
+  3. Run:  bcdedit /set testsigning on
+  4. Reboot Windows. A "Test Mode" watermark should appear on the desktop.
+  5. Verify with:  bcdedit /enum {current} | findstr testsigning
+     The result must be "testsigning Yes".
+
+To return to normal, run "bcdedit /set testsigning off" as administrator,
+re-enable Secure Boot if desired, and reboot. Use Uninstall.cmd first if the
+drivers are no longer needed.
 
 INSTALLATION
 ------------

@@ -11,11 +11,35 @@ This guide applies to package `cros-sofaudio-v1.3.7.zip`. Installation takes a f
 
 1. **Supported hardware:** Google Marasov / ASUS Chromebook Plus CX34 (Intel Core i3-1215U, Alder Lake-P, DSP `8086:51C8`) with RTL5682S and RT1019P. The installer verifies the hardware IDs and stops on a mismatch.
 2. **Custom UEFI firmware:** full UEFI/coreboot firmware must be flashed (for example, MrChromebox) with ChromeOS write-protect disabled.
-3. **Windows 11 x64** with Secure Boot disabled if Windows refuses to enable Test Mode.
-4. **Test Mode:** these drivers are test-signed, so Windows must run with `testsigning on`.
+3. **Windows 11 x64** with Secure Boot disabled. Windows may refuse to enable Test Mode while Secure Boot is active.
+4. **Test Mode:** the drivers use a self-issued test certificate, so Windows must run with `testsigning on`.
 5. **Vulnerable driver blocklist:** `Install.cmd` disables the Microsoft vulnerable-driver blocklist after verifying every package signature. The previous value is saved and restored by `Uninstall.cmd`. A reboot is required for Test Mode and the blocklist change.
 
-These are test-signed drivers, not WHQL-certified. The installer imports `ChromebookAudio.cer` into `Root` and `TrustedPublisher` and trusts the test signature.
+These drivers are **not WHQL-certified by Microsoft**. Official WHQL signing requires an EV code-signing certificate, a Microsoft Partner Center account, and paid validation/attestation. Those recurring costs are outside the scope of this free project, so Test Mode is mandatory. The installer imports `ChromebookAudio.cer` into `Root` and `TrustedPublisher` and trusts the test signature.
+
+### Enable Windows Test Mode manually
+
+`Install.cmd` can enable Test Mode when you answer **Y**. If you need to do it yourself, or if the setting was not applied:
+
+1. Disable **Secure Boot** in the UEFI firmware setup. On Marasov/CX34 with MrChromebox or coreboot, enter the firmware setup and turn Secure Boot off. Keep it disabled while these drivers are installed.
+2. Open **Start**, type `cmd`, right-click **Command Prompt**, and choose **Run as administrator**.
+3. Run:
+
+   ```cmd
+   bcdedit /set testsigning on
+   ```
+
+4. Reboot the Chromebook.
+5. Verify the setting in an administrator Command Prompt:
+
+   ```cmd
+   bcdedit /enum {current} | findstr testsigning
+   ```
+
+   It must report `testsigning Yes`. The desktop should also show a **Test Mode Windows** watermark.
+6. Run `Install.cmd` from the extracted package as administrator.
+
+To restore a normal Windows boot, run `bcdedit /set testsigning off` as administrator, re-enable Secure Boot if desired, and reboot. Run `Uninstall.cmd` first if the drivers are no longer needed.
 
 ---
 

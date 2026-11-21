@@ -7,8 +7,11 @@
 
 > [!IMPORTANT]
 > v1.3.7 passed live speech validation on Google Marasov / ASUS Chromebook Plus CX34.
-> It is test-signed and requires Test Mode, Secure Boot disabled, and trust in the
-> public `ChromebookAudio.cer` certificate.
+> It is signed with a self-issued test certificate, not WHQL-certified by Microsoft.
+> Official WHQL signing requires an EV certificate, a Partner Center account, and paid
+> validation, so Windows loads these drivers only in Test Mode with Secure Boot
+> disabled and the public `ChromebookAudio.cer` trusted. See `INSTALL_GUIDE.md` for the
+> step-by-step Test Mode procedure.
 
 ---
 
@@ -60,8 +63,10 @@ with v1.3.5 and v1.3.6.
 
 ### Important
 
-This is a test-signed release, not WHQL-certified. The ZIP contains only the public
-`.cer` certificate; the private key is never published.
+This is a test-signed release, not WHQL-certified. Official Microsoft certification
+was not pursued because of its EV certificate and paid validation costs. Windows must
+run in Test Mode with Secure Boot disabled. The ZIP contains only the public `.cer`
+certificate; the private key is never published.
 
 ---
 

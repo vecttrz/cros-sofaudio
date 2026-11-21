@@ -1,2 +1,2 @@
 # SHA-256 checksums
-121c32a3ad591b9c6319a775eadaaae62fe3fa7c06ee2f9306eb6a64930fed40  cros-sofaudio-v1.3.7.zip
+70c4f3f4e5a0979f37bfe7e5381804a7c0026e92485cf3099937317baa0ea2c7  cros-sofaudio-v1.3.7.zip

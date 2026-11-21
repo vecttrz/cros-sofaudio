@@ -91,6 +91,34 @@ Since `v1.3.4`, the switcher keeps *Multiple microphones* as the default capture
 
 ---
 
+## Windows Test Mode requirement
+
+These drivers are signed with a self-issued test certificate. They are **not WHQL-certified by Microsoft**. Official WHQL signing requires an EV code-signing certificate, a Microsoft Partner Center account, and paid validation/attestation. Those recurring costs are outside the scope of this free project, so Windows loads these drivers only when **Test Mode** is enabled and **Secure Boot** is disabled.
+
+### Enable Test Mode manually
+
+1. Disable **Secure Boot** in the UEFI firmware. On Marasov/CX34 with MrChromebox or coreboot, enter the firmware setup and turn Secure Boot off. Windows may reject `testsigning on` while Secure Boot is active.
+2. In Windows, open **Start**, type `cmd`, right-click **Command Prompt**, and choose **Run as administrator**.
+3. Run:
+
+   ```cmd
+   bcdedit /set testsigning on
+   ```
+
+4. Reboot Windows.
+5. Confirm the setting:
+
+   ```cmd
+   bcdedit /enum {current} | findstr testsigning
+   ```
+
+   The result must be `testsigning Yes`. A **Test Mode** watermark on the desktop is also expected.
+6. Run `Install.cmd` from the extracted package as administrator. The installer trusts `ChromebookAudio.cer` and configures the vulnerable-driver blocklist.
+
+To return to a normal Windows boot, run `bcdedit /set testsigning off` as administrator, re-enable Secure Boot if desired, and reboot. Run `Uninstall.cmd` first if the drivers are no longer needed.
+
+---
+
 ## Building from source
 
 Requirements: Windows 11 x64, Visual Studio 2022 (v143), WDK/SDK `10.0.26100.0`, KMDF 1.33, and a test-signing key.
