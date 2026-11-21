@@ -1,7 +1,7 @@
 param([Parameter(Mandatory=$true)][double]$Scalar)
 
 $root = 'C:\Users\victor\Documents\Driver Audio\cros-sofaudio-rtl'
-$id = '{0.0.1.00000000}.{47a2cd07-27e8-4f84-b842-98553c4b29e9}'
+$id = '{0.0.1.00000000}.{f4d9114e-312c-4992-b350-7239a777eb57}'
 $wav = 'C:\Users\victor\AppData\Local\Temp\opencode\mic-array-scalar.wav'
 
 & "$root\tests\Set-CaptureVolume.exe" set $Scalar | Out-Null

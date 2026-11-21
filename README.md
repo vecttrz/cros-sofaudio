@@ -6,7 +6,7 @@
 
 Open-source Windows drivers that enable real internal audio on Intel Chromebooks through the **Intel Sound Open Firmware (SOF) DSP**. This working copy (`cros-sofaudio-rtl`) is ported to the **Google Marasov / ASUS Chromebook Plus CX34**.
 
-**Status: speakers, headphone jack, and internal microphone array verified; headset microphone still under investigation.** Speaker output works with SOF firmware `10.35.0.9915` and drivers `18.4.x`/`18.5.x`. The decisive fix was aligning the `SSP1` `DAI_CONFIG` with the real downstream blob: **19.2 MHz MCLK / 3.072 MHz BCLK / 32-bit slots / 48 kHz**. `v1.3.2` corrected TRRS detection and the RTL5682S register map; `v1.3.3` added the full `SAR_PWR_NORMAL` sequence from Linux v6.6 / CoolStar; `v1.3.4` routed applications to the working internal microphone array; `v1.3.5` caps that endpoint to a clean capture level so applications no longer see clipped, DC-saturated samples. Live tests ruled out microphone bias polarity and I²S word width as the sole cause of the jack silence.
+**Status: speakers, headphone jack, and internal microphone validated; headset microphone out of scope.** Speaker output works with SOF firmware `10.35.0.9915` and drivers `18.4.x`/`18.5.x`. The decisive speaker fix was aligning the `SSP1` `DAI_CONFIG` with the real downstream blob: **19.2 MHz MCLK / 3.072 MHz BCLK / 32-bit slots / 48 kHz**. `v1.3.2` corrected TRRS detection and the RTL5682S register map; `v1.3.3` added the full `SAR_PWR_NORMAL` sequence from Linux v6.6 / CoolStar; `v1.3.4`/`v1.3.5` corrected capture default routing and endpoint level. Correct float32 WAV analysis showed that those versions still produced DC/stale DMIC data, and `v1.3.6` changed PDM0 to PDM1 without restoring speech. `v1.3.7` adds the canonical EQIIR high-pass stage and passed a 20-second live speech capture with `ac_rms=0.018311` and `108556` zero crossings.
 
 > [!IMPORTANT]
 > These drivers are **test-signed** with a test certificate. They are not WHQL-certified. Windows requires **Test Mode**, **Secure Boot disabled**, and trust in `ChromebookAudio.cer`. The installer automates everything except disabling Secure Boot in the UEFI firmware.
@@ -30,7 +30,7 @@ The installer checks these IDs and stops if the hardware does not match. Other m
 
 ## Quick installation
 
-1. Download `cros-sofaudio-v1.3.5.zip` from **Releases**.
+1. Download `cros-sofaudio-v1.3.7.zip` from **Releases**.
 2. Extract the entire archive to a local folder (for example `Desktop\CrosSofAudio`).
 3. Run **`Install.cmd`** as administrator (it elevates itself).
 4. If prompted for Test Mode, answer **Y** and **reboot**. After the reboot, run `Install.cmd` again.
@@ -84,10 +84,10 @@ Four capture/render endpoints are exposed:
 |---|---|---|---|
 | Speakers | Render | SSP1 → RT1019P | Verified |
 | Headphones | Render | SSP0 → RTL5682S | Verified |
-| Microphone array | Capture | DMIC0 PDM array | Working; capture default |
+| Microphone array | Capture | DMIC0 PDM array | Validated; capture default |
 | Headset microphone | Capture | SSP0 → RTL5682S TRRS jack | Silent; visible for diagnosis |
 
-Since `v1.3.4`, the switcher keeps *Multiple microphones* as the default capture device for the Multimedia, Communications, and Console roles in every jack state. Since `v1.3.5`, it also caps that endpoint at `0.70` (`+5.49 dB`) when Windows reports the excessive `+30 dB` level, preventing clipped and DC-saturated capture. The headset microphone remains visible so it can be selected manually, but it is no longer the default.
+Since `v1.3.4`, the switcher keeps *Multiple microphones* as the default capture device for the Multimedia, Communications, and Console roles in every jack state. Since `v1.3.5`, it also caps that endpoint at `0.70` (`+5.49 dB`) when Windows reports the excessive `+30 dB` level. `v1.3.7` restored the speech signal with the canonical EQIIR high-pass stage. The headset microphone remains visible for diagnosis but is no longer the default.
 
 ---
 
@@ -104,7 +104,7 @@ The script builds `Release|x64`, generates catalogs with `Inf2Cat`, signs all 10
 To create the installable package:
 
 ```cmd
-package.cmd v1.3.5
+package.cmd v1.3.7
 ```
 
 The GitHub Actions workflow (`.github/workflows/build.yml`) builds and signs with a PFX stored as repository secrets (`DRIVER_SIGNING_PFX_BASE64` / `DRIVER_SIGNING_PFX_PASSWORD`). The private key is never committed to the repository. The artifacts are still test-signed and require Test Mode.
@@ -132,7 +132,7 @@ Run `Collect-Logs.cmd` and review `audio-log.txt`. Indicators of a healthy boot:
 
 Historical diagnosis notes: [`PORT_NOTES.md`](PORT_NOTES.md) and [`REVERSE_ENGINEERING_SPEC.md`](REVERSE_ENGINEERING_SPEC.md).
 
-**Known limitations:** this port uses SOF IPC3 with generic ADL firmware. `v1.3.5` keeps the RTL5682S register map, endpoint filtering by `DeviceDesc`/`InstanceId`, and `SAR_PWR_NORMAL`, makes the internal microphone the capture default, and caps its Windows capture level at `0.70`. The TRRS headset microphone still produces no signal and remains outside the current fix scope. The underlying endpoint still reports a `+30 dB` range, so setting the slider above `0.81` can reintroduce clipping; the switcher restores the safe level on its next pass. Jack detection may need adjustment on boards other than Marasov/CX34. No Linux SOF stack has been ported, and no paid CoolStar components are used.
+**Known limitations:** this port uses SOF IPC3 with generic ADL firmware. `v1.3.5` keeps the RTL5682S register map, endpoint filtering by `DeviceDesc`/`InstanceId`, and `SAR_PWR_NORMAL`, makes the internal microphone the capture default, and caps its Windows capture level at `0.70`. `v1.3.7` adds the EQIIR high-pass stage needed for usable speech capture. The TRRS headset microphone produces no signal and remains outside the current fix scope. The underlying endpoint still reports a `+30 dB` range, so setting the slider above `0.81` can reintroduce clipping; the switcher restores the safe level on its next pass. Jack detection may need adjustment on boards other than Marasov/CX34. No Linux SOF stack has been ported, and no paid CoolStar components are used.
 
 ---
 

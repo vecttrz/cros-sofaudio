@@ -242,7 +242,7 @@ static const SOF_PATH_DESC c_PathDesc[SOF_PATH_COUNT] = {
       BLOB(c_SofMICJACKDaiHwParams), BLOB(c_SofMICJACKDaiHwFree), BLOB(c_SofMICJACKPcmParams),
       BLOB(c_SofMICJACKTrigStart), BLOB(c_SofMICJACKTrigStop), BLOB(c_SofMICJACKPcmFree) },
     /* SOF_PATH_DMIC */
-    { L"Dmic", L"MicArrayDspAttenDb", 0, SOF_DMIC_VOL_MSG_INDEX, "DMIC0", 0, TRUE, FALSE, L"SUCCESS: internal microphone pipeline 4 (DMIC0 -> volume -> PCM99C) created",
+    { L"Dmic", L"MicArrayDspAttenDb", 0, SOF_DMIC_VOL_MSG_INDEX, "DMIC0", 0, TRUE, FALSE, L"SUCCESS: internal microphone pipeline 4 (DMIC0 -> EQIIR -> volume -> PCM99C) created",
       c_SofDMICSetup, ARRAYSIZE(c_SofDMICSetup),
       BLOB(c_SofDMICDaiHwParams), BLOB(c_SofDMICDaiHwFree), BLOB(c_SofDMICPcmParams),
       BLOB(c_SofDMICTrigStart), BLOB(c_SofDMICTrigStop), BLOB(c_SofDMICPcmFree) },
@@ -309,26 +309,51 @@ static BOOLEAN IsDaiConfigName(const char* name)
 static void LogDaiConfigPayload(ULONG path, PCWSTR prefix, const UINT8* msg, ULONG size)
 {
     if (msg == NULL || size < 112) return;
-    if (DaiU32At(msg, 8) != 1) return;   /* SOF_DAI_INTEL_SSP */
 
-    LogDaiField(path, prefix, L"DaiType",        DaiU32At(msg, 8));
-    LogDaiField(path, prefix, L"DaiFormat",      DaiU16At(msg, 16));
-    LogDaiField(path, prefix, L"DaiFlags",       msg[19]);
-    LogDaiField(path, prefix, L"DaiMclkId",      DaiU16At(msg, 58));
-    LogDaiField(path, prefix, L"DaiMclkHz",      DaiU32At(msg, 60));
-    LogDaiField(path, prefix, L"DaiFsyncHz",     DaiU32At(msg, 64));
-    LogDaiField(path, prefix, L"DaiBclkHz",      DaiU32At(msg, 68));
-    LogDaiField(path, prefix, L"DaiTdmSlots",    DaiU32At(msg, 72));
-    LogDaiField(path, prefix, L"DaiRxSlots",     DaiU32At(msg, 76));
-    LogDaiField(path, prefix, L"DaiTxSlots",     DaiU32At(msg, 80));
-    LogDaiField(path, prefix, L"DaiSampleBits",  DaiU32At(msg, 84));
-    LogDaiField(path, prefix, L"DaiSlotWidth",   DaiU16At(msg, 88));
-    LogDaiField(path, prefix, L"DaiMclkDir",     DaiU32At(msg, 92));
-    LogDaiField(path, prefix, L"DaiFramePulse",  DaiU16At(msg, 96));
-    LogDaiField(path, prefix, L"DaiSlotPadding", DaiU16At(msg, 98));
-    LogDaiField(path, prefix, L"DaiClksControl", DaiU32At(msg, 100));
-    LogDaiField(path, prefix, L"DaiQuirks",      DaiU32At(msg, 104));
-    LogDaiField(path, prefix, L"DaiBclkDelay",   DaiU32At(msg, 108));
+    ULONG type = DaiU32At(msg, 8);
+    LogDaiField(path, prefix, L"DaiType", type);
+    LogDaiField(path, prefix, L"DaiFormat", DaiU16At(msg, 16));
+    LogDaiField(path, prefix, L"DaiFlags", msg[19]);
+
+    if (type == 1) { /* SOF_DAI_INTEL_SSP */
+        LogDaiField(path, prefix, L"DaiMclkId",      DaiU16At(msg, 58));
+        LogDaiField(path, prefix, L"DaiMclkHz",      DaiU32At(msg, 60));
+        LogDaiField(path, prefix, L"DaiFsyncHz",     DaiU32At(msg, 64));
+        LogDaiField(path, prefix, L"DaiBclkHz",      DaiU32At(msg, 68));
+        LogDaiField(path, prefix, L"DaiTdmSlots",    DaiU32At(msg, 72));
+        LogDaiField(path, prefix, L"DaiRxSlots",     DaiU32At(msg, 76));
+        LogDaiField(path, prefix, L"DaiTxSlots",     DaiU32At(msg, 80));
+        LogDaiField(path, prefix, L"DaiSampleBits",  DaiU32At(msg, 84));
+        LogDaiField(path, prefix, L"DaiSlotWidth",   DaiU16At(msg, 88));
+        LogDaiField(path, prefix, L"DaiMclkDir",     DaiU32At(msg, 92));
+        LogDaiField(path, prefix, L"DaiFramePulse",  DaiU16At(msg, 96));
+        LogDaiField(path, prefix, L"DaiSlotPadding", DaiU16At(msg, 98));
+        LogDaiField(path, prefix, L"DaiClksControl", DaiU32At(msg, 100));
+        LogDaiField(path, prefix, L"DaiQuirks",      DaiU32At(msg, 104));
+        LogDaiField(path, prefix, L"DaiBclkDelay",   DaiU32At(msg, 108));
+        return;
+    }
+
+    if (type == 2 && size >= 216) { /* SOF_DAI_INTEL_DMIC */
+        LogDaiField(path, prefix, L"DmicVersion",       DaiU32At(msg, 56));
+        LogDaiField(path, prefix, L"DmicPdmclkMinHz",   DaiU32At(msg, 60));
+        LogDaiField(path, prefix, L"DmicPdmclkMaxHz",   DaiU32At(msg, 64));
+        LogDaiField(path, prefix, L"DmicFifoFsHz",      DaiU32At(msg, 68));
+        LogDaiField(path, prefix, L"DmicFifoBits",      DaiU16At(msg, 76));
+        LogDaiField(path, prefix, L"DmicDutyMinPct",    DaiU16At(msg, 80));
+        LogDaiField(path, prefix, L"DmicDutyMaxPct",    DaiU16At(msg, 82));
+        LogDaiField(path, prefix, L"DmicNumPdmActive",  DaiU32At(msg, 84));
+        LogDaiField(path, prefix, L"DmicWakeUpTimeUs",  DaiU32At(msg, 88));
+        LogDaiField(path, prefix, L"DmicMinClkOnUs",    DaiU32At(msg, 92));
+        LogDaiField(path, prefix, L"DmicUnmuteRampMs",  DaiU32At(msg, 96));
+        LogDaiField(path, prefix, L"DmicPdm0Id",        DaiU16At(msg, 124));
+        LogDaiField(path, prefix, L"DmicPdm0MicA",      DaiU16At(msg, 126));
+        LogDaiField(path, prefix, L"DmicPdm0MicB",      DaiU16At(msg, 128));
+        LogDaiField(path, prefix, L"DmicPdm0PolarityA", DaiU16At(msg, 130));
+        LogDaiField(path, prefix, L"DmicPdm0PolarityB", DaiU16At(msg, 132));
+        LogDaiField(path, prefix, L"DmicPdm0ClkEdge",   DaiU16At(msg, 134));
+        LogDaiField(path, prefix, L"DmicPdm0Skew",      DaiU16At(msg, 136));
+    }
 }
 
 /* 65536 * 10^(-dB/20) for dB = 0..60 (Q8.16 linear volume) */

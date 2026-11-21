@@ -124,3 +124,38 @@ The remaining risk is Windows support for RTL5682S (jack detection and I²C) and
 - Added `endpointvolume.h` and `uuid.lib` to the switcher project/build. No `.sys`, topology, INF, or DriverVer changes were needed; the SSP1/RT1019P speaker pipeline is untouched.
 - Live verification after replacing the service: default capture remained *Multiple microphones* at `0.7000` / `+5.49 dB`; WASAPI capture reported `rms≈1998.5` (`-24.3 dBFS`), peak `14360` (`-7.2 dBFS`), and `0` out-of-range samples.
 - Added local diagnostic helpers under `tests\`: `Set-CaptureVolume.cpp` and `Analyze-Mic.ps1`. They are development tools only and are not copied into the release ZIP.
+
+---
+
+## Changes in v1.3.6 (21/11/2026)
+
+- Re-measured v1.3.5 with SysFx enabled and disabled. Raw 32-bit float capture had a fixed positive DC level (`mean≈0.82`, later `0.88`) with one startup ramp and essentially no zero crossings; SysFx only turned that DC step into a decaying transient. This is a non-toggling PDM data line, not a Windows level or APO problem.
+- All DMIC setup, HW_PARAMS, PCM_PARAMS, and trigger IPCs returned `fw err 0` with `status 0x00000000`, and `DmicStop_SD_LPIB` advanced by one 20 ms stereo 16-bit period, so the DSP pipeline and host DMA are running.
+- The generated DMIC DAI_CONFIG still selected PDM0 (`pdm[0].id = 0`). Marasov coreboot change 89454 states that Marasov, Mithrax, and Omnigul use PDM1 for the microphone topology and override the baseboard default with `mic-tplg="_2ch_pdm1"`. The installed MrChromebox firmware is newer than that change.
+- `tools-gen/gen_capture_pipelines.c`: define `DMIC_PDM_CONTROLLER_ID` as `1` and set `d->dmic.pdm[0].id` from it. The generator comment now records the Marasov PDM1 setting instead of the earlier PDM0 assumption.
+- `CsAudioIntcsof/sof_capture_pipelines.h`: regenerated with the SOF v2.2.1 headers. A normalized diff against the previous header shows exactly three byte changes: `pdm[0].id` in `c_SofDMICMsg07`, `c_SofDMICDaiHwParams`, and `c_SofDMICDaiHwFree`. Rates, clocks, FIFO format, duty cycle, ramp time, mic A/B enables, `num_pdm_active = 1`, and all SSP0/SSP1 messages are unchanged.
+- `CsAudioIntcsof` version moved from `18.4.3.0` to `18.4.4.0`; `DriverVer`, `.vcxproj` `TimeStamp`, `build.cmd`, and `package.cmd` were bumped to `v1.3.6` so Windows accepts the replacement driver.
+- This build was installed locally with elevated `Start-Process -Verb RunAs`; installation returned `exit=0`. DSP boot reached `Stage=10`, `Status=0`, `Result=SUCCESS: SOF firmware booted and sent FW_READY`, and all DMIC setup/stream IPCs returned `fw err 0` / `status 0x00000000` with `IpcTimeouts=0`.
+- Live 15 s and 20 s captures with SysFx enabled and a 20 s raw SysFx-disabled capture were made while the user spoke. SysFx post-startup RMS stayed around `0.000195`–`0.000311`; raw capture showed `mean=0.896557`, `rms=0.900593`, `zero_crossings=1`, and a constant `0.905215` tail. v1.3.6 therefore failed live validation and was not published. The PDM controller ID alone was not the root cause.
+
+---
+
+## Changes in v1.3.7 (21/11/2026, local test build only)
+
+- The canonical `sof-hda-generic-2ch-pdm1.tplg` from SOF v2.2.1 was decoded and compared field by field with the generated DMIC configuration. The DMIC tokens already match: `driver_ipc_version=1`, `pdmclk_min=2400000`, `pdmclk_max=4800000`, duty `40/60`, `fifo_fs=48000`, `fifo_bits=32`, `num_pdm_active=1`, ramp `200`, PDM ID `1`, mic A/B enabled, polarity/edge/skew `0`, `dai_type=DMIC`, `dai_index=0`, and comp UUIDs for host/PGA/DAI.
+- The remaining structural difference was the canonical `EQIIR10.0` DF2T high-pass component. `tools-gen/gen_capture_pipelines.c` now emits it with the exact 88-byte coefficient block from the topology: `size=88`, `channels=2`, `responses=1`, assign `[0,0]`, `sections=1`, `series=1`, coefficients `a2=-1065820340`, `a1=2139532835`, `b2=536156946`, `b1=-1072313893`, `b0=536156946`, shift `-4`, gain `20432`.
+- The DMIC graph changed from `DMIC0.IN -> buffer -> volume -> buffer -> PCM99C` to `DMIC0.IN -> buffer -> EQIIR -> buffer -> volume -> buffer -> PCM99C`, with component IDs `DAI=0x28`, `BUF1=0x2c`, `EQ=0x2e`, `BUF2=0x2f`, `PGA=0x2b`, `BUF0=0x2a`, `HOST=0x29`, and pipeline `4`.
+- The EQIIR IPC is a 204-byte `COMP_NEW`: a 100-byte `struct sof_ipc_comp_process`, 88 bytes of coefficients at offset `100`, and the 16-byte EQIIR UUID at offset `188`. This matches firmware `get_drv()`, which reads the UUID from `hdr.size - ext_data_length`.
+- `CsAudioIntcsof/sof_ipc.cpp` now logs DMIC-specific `DAI_CONFIG` fields instead of skipping every non-SSP DAI payload: DMIC version, PDM clock range, FIFO rate/width, duty cycle, active PDM count, wake/min-on/ramp times, and PDM0 ID plus mic A/B and polarity/edge/skew controls.
+- The generator descriptor arrays were enlarged from 16 to 20 entries. The 17-message DMIC path had overflowed `names[16]`, corrupting the first setup label; regeneration now emits `{ "PIPE_NEW pipeline 4", ... }` correctly.
+- `CsAudioIntcsof` moved from `18.4.4.0` to `18.4.5.0`; `DriverVer`, `.vcxproj` `TimeStamp`, `build.cmd`, and `package.cmd` were bumped together. The SSP1/RT1019P speaker pipeline, RTL5682S jack codec, and endpoint switcher are unchanged.
+- v1.3.7 was installed elevated. Windows loaded `csaudiointcsof 18.4.5.0`, DSP boot reached `Stage=10` / `Status=0`, all 17 DMIC setup IPCs returned `fw err 0` / `status 0x00000000`, and DMIC telemetry matched the canonical PDM1 configuration.
+- A 20-second WASAPI capture while the user spoke continuously passed: `mean=0.000001`, `ac_rms=0.018311`, `zero_crossings=108556`, `19/19` post-startup blocks above `0.001` AC RMS, and no out-of-range samples. v1.3.7 is therefore the first build with proven live speech capture and may be published.
+
+---
+
+## Measurement correction (21/11/2026)
+
+- Earlier notes that reported `rms≈1998.5`, `rms≈70591`, or `rms≈79571` for the internal array parsed 32-bit float WAV samples as integers. Those values were false positives.
+- All WAV analysis must read IEEE float32 samples with `BitConverter.ToSingle`. With correct parsing, v1.3.5/v1.3.6 captures were fixed DC levels or stale blocks with only a startup transient.
+- The v1.3.2/v1.3.4 claims that the DMIC array was confirmed working are superseded by this correction. Only routing, default-device selection, and level capping were proven; speech capture was not.

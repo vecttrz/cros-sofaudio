@@ -5,12 +5,14 @@
  *
  *   Pipeline 3: SSP0.IN -> buffer -> volume -> buffer -> PCM1C
  *               (RTL5682S headset microphone, 48 kHz stereo slots)
- *   Pipeline 4: DMIC0.IN -> buffer -> volume -> buffer -> PCM99C
+ *   Pipeline 4: DMIC0.IN -> buffer -> EQIIR -> buffer -> volume -> buffer -> PCM99C
  *               (internal two-channel PDM microphone array)
  *
  * The layouts come from SOF v2.2.1 IPC headers, matching sof-adl.ri. The
- * DMIC parameters follow sof-adl-rt5682s.m4 plus volmar's coreboot
- * mic-tplg="_2ch_pdm0" setting.
+ * DMIC parameters follow the canonical 2ch PDM1 topology and Marasov's
+ * coreboot mic-tplg="_2ch_pdm1" setting. The DF2T high-pass stage is copied
+ * from sof-hda-generic-2ch-pdm1.tplg; its omission in earlier builds is the
+ * remaining structural difference under investigation.
  *
  * Build & run:
  *   cc -I<sof-v2.2.1>/src/include -DCONFIG_IPC_MAJOR_3=1 \
@@ -24,6 +26,7 @@
 #pragma pack(push, 4)
 #endif
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
@@ -41,13 +44,35 @@
 static const uint8_t UUID_HOST[16] = {0x0c,0x10,0x9d,0x8b,0x78,0x6d,0x8f,0x41,0x90,0xa3,0xe0,0xe8,0x05,0xd0,0x85,0x2b};
 static const uint8_t UUID_PGA[16]  = {0x7e,0x67,0x7e,0xb7,0xf4,0x5f,0x88,0x41,0xaf,0x14,0xfb,0xa8,0xbd,0xbf,0x86,0x82};
 static const uint8_t UUID_DAI[16]  = {0x27,0x0d,0xb0,0xc2,0xbc,0xff,0x50,0x41,0xa5,0x1a,0x24,0x5c,0x79,0xc5,0xe5,0x4b};
+static const uint8_t UUID_EQ[16]   = {0xe6,0xc0,0x50,0x51,0xf9,0x27,0xc8,0x4e,0x83,0x51,0xc7,0x05,0xb6,0x42,0xd1,0x2f};
+
+/* Marasov/CX34 routes the internal microphone array to PDM1. */
+#define DMIC_PDM_CONTROLLER_ID 1
+
+/* DF2T high-pass from sof-hda-generic-2ch-pdm1.tplg, widget EQIIR10.0. */
+static const int32_t EQIIR10_COEF[22] = {
+    88,                 /* sof_eq_iir_config.size */
+    2,                  /* channels_in_config */
+    1,                  /* number_of_responses */
+    0, 0, 0, 0,         /* reserved */
+    0, 0,               /* assign both channels to response 0 */
+    1, 1,               /* num_sections, num_sections_in_series */
+    0, 0, 0, 0,         /* response reserved */
+    -1065820340,        /* a2, Q2.30 */
+    2139532835,         /* a1, Q2.30 */
+    536156946,          /* b2, Q2.30 */
+    -1072313893,        /* b1, Q2.30 */
+    536156946,          /* b0, Q2.30 */
+    -4,                 /* output_shift */
+    20432               /* output_gain, Q2.14 */
+};
 
 typedef struct path_out {
     const char *symbol;
     const char *label;
     int nmsg;
-    char names[16][64];
-    char descs[16][96];
+    char names[20][64];
+    char descs[20][96];
 } path_out;
 
 static uint32_t q816(double db)
@@ -82,6 +107,27 @@ static void comp_init(struct sof_ipc_comp *c, uint32_t total, uint32_t id,
     c->pipeline_id = pipe_id;
     c->core = 0;
     c->ext_data_length = has_uuid ? 16 : 0;
+}
+
+static void add_eq_iir(path_out *o, uint32_t id_eq, uint32_t pipe_id)
+{
+    const size_t eqBytes = sizeof(EQIIR10_COEF);
+    const size_t total = sizeof(struct sof_ipc_comp_process) + eqBytes + 16;
+    uint8_t *buf = calloc(1, total);
+    struct sof_ipc_comp_process *e = (void *)buf;
+
+    comp_init(&e->comp, (uint32_t)total, id_eq, SOF_COMP_EQ_IIR, pipe_id, 1);
+    e->config.hdr.size = sizeof(e->config);
+    e->config.periods_sink = 2;
+    e->config.periods_source = 2;
+    e->config.frame_fmt = SOF_IPC_FRAME_S32_LE;
+    e->size = (uint32_t)eqBytes;
+    e->type = 2; /* SOF_PROCESS_EQIIR */
+    memcpy(buf + sizeof(*e), EQIIR10_COEF, eqBytes);
+    /* get_drv() reads the UUID from the end of the extended-data area. */
+    memcpy(buf + total - 16, UUID_EQ, 16);
+    add(o, "COMP_NEW eq-iir highpass", buf, total);
+    free(buf);
 }
 
 static void connect(path_out *o, uint32_t src, uint32_t sink, const char *desc)
@@ -137,7 +183,7 @@ static void make_dmic0_config(struct sof_ipc_dai_config *d, uint8_t flags)
     d->dmic.duty_max = 60;
     d->dmic.num_pdm_active = 1;
     d->dmic.unmute_ramp_time = 200;
-    d->dmic.pdm[0].id = 0;
+    d->dmic.pdm[0].id = DMIC_PDM_CONTROLLER_ID;
     d->dmic.pdm[0].enable_mic_a = 1;
     d->dmic.pdm[0].enable_mic_b = 1;
 }
@@ -151,7 +197,7 @@ static void make_dai_config(struct sof_ipc_dai_config *d, int dmic, uint8_t flag
 static void generate_path(path_out *o, uint32_t pipe_id, uint32_t pcm_id,
                           uint32_t id_dai, uint32_t id_host, uint32_t id_buf0,
                           uint32_t id_pga, uint32_t id_buf1, uint32_t id_pipe,
-                          int dmic)
+                          uint32_t id_eq, uint32_t id_buf2, int dmic)
 {
     char desc[96];
 
@@ -241,6 +287,23 @@ static void generate_path(path_out *o, uint32_t pipe_id, uint32_t pcm_id,
                sizeof(struct sof_ipc_ctrl_value_chan));
     }
 
+    /* Canonical DMIC pipelines include a DF2T high-pass before the PGA. */
+    if (dmic) {
+        add_eq_iir(o, id_eq, pipe_id);
+
+        struct sof_ipc_buffer b;
+        memset(&b, 0, sizeof(b));
+        b.comp.hdr.size = sizeof(b);
+        b.comp.hdr.cmd = SOF_IPC_GLB_TPLG_MSG | SOF_IPC_TPLG_BUFFER_NEW;
+        b.comp.id = id_buf2;
+        b.comp.type = SOF_COMP_BUFFER;
+        b.comp.pipeline_id = pipe_id;
+        b.size = 768;
+        b.caps = 113;
+        snprintf(desc, sizeof(desc), "BUFFER_NEW capture %u EQ", pipe_id);
+        add(o, desc, &b, sizeof(b));
+    }
+
     /* DAI-side buffer. */
     {
         struct sof_ipc_buffer b;
@@ -281,7 +344,13 @@ static void generate_path(path_out *o, uint32_t pipe_id, uint32_t pcm_id,
 
     /* Data flows from the DAI toward the host. */
     connect(o, id_dai,  id_buf1, "CONNECT capture DAI -> BUF1");
-    connect(o, id_buf1, id_pga,  "CONNECT capture BUF1 -> PGA");
+    if (dmic) {
+        connect(o, id_buf1, id_eq,   "CONNECT capture BUF1 -> EQ");
+        connect(o, id_eq,   id_buf2, "CONNECT capture EQ -> BUF2");
+        connect(o, id_buf2, id_pga,  "CONNECT capture BUF2 -> PGA");
+    } else {
+        connect(o, id_buf1, id_pga,  "CONNECT capture BUF1 -> PGA");
+    }
     connect(o, id_pga,  id_buf0, "CONNECT capture PGA -> BUF0");
     connect(o, id_buf0, id_host, "CONNECT capture BUF0 -> HOST");
 
@@ -372,9 +441,9 @@ int main(void)
            " * Do not edit by hand. */\n#pragma once\n\n");
     printf("#define SOF_MICJACK_PIPE_ID 3\n#define SOF_DMIC_PIPE_ID 4\n\n");
 
-    generate_path(&micjack, 3, 1, 30, 31, 32, 33, 34, 35, 0);
+    generate_path(&micjack, 3, 1, 30, 31, 32, 33, 34, 35, 0, 0, 0);
     printf("\n");
-    generate_path(&dmic, 4, 99, 40, 41, 42, 43, 44, 45, 1);
+    generate_path(&dmic, 4, 99, 40, 41, 42, 43, 44, 45, 46, 47, 1);
 
     fprintf(stderr, "micjack messages %d, dmic messages %d, dai config %zu, pcm params %zu\n",
             micjack.nmsg, dmic.nmsg, sizeof(struct sof_ipc_dai_config), sizeof(struct sof_ipc_pcm_params));
