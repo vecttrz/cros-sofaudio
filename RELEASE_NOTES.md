@@ -2,8 +2,40 @@
 
 ## Current release
 
-**Tag:** `v1.3.4`  
-**Title:** `v1.3.4 — functional default capture`
+**Tag:** `v1.3.5`  
+**Title:** `v1.3.5 — clean internal microphone capture`
+
+---
+
+## v1.3.5 — clean internal microphone capture (21/11/2026)
+
+Live measurement after v1.3.4 showed why the internal microphone could still sound dead in applications: the array was routed correctly, but its Windows capture endpoint reported a `+30 dB` maximum level. At `100%` the driver returned float samples with a large positive DC offset and peaks above `7.0`, so applications clamped the waveform to a nearly flat line.
+
+### Changes from v1.3.4
+
+- The endpoint switcher now caps the internal microphone capture level to `0.70` (about `+5.49 dB`) whenever it finds the endpoint above `0.81`; lower user-selected levels are preserved.
+- The cap is applied on service startup and on every jack-state routing pass, with or without a headset inserted.
+- Measured with the new service: `rms≈1998.5` (`-24.3 dBFS`), peak `14360` (`-7.2 dBFS`), `out-of-range=0`. No clipping or DC saturation remains.
+- No kernel binaries changed. `rt5682saudio` remains at `18.5.2.0`; the SSP1/RT1019P speaker pipeline is untouched.
+
+### Status
+
+- **Speakers:** verified on Google Marasov / ASUS Chromebook Plus CX34.
+- **Headphone jack:** verified on the same machine.
+- **Internal microphone (DMIC0 array):** working, default, and now capped to a clean capture level.
+- **TRRS headset microphone:** still silent on this hardware and outside the current fix scope.
+
+### Important
+
+Test-signed drivers, not WHQL. The ZIP contains only the public `.cer` certificate; the private key is never published. This release changes only the endpoint switcher service, so no kernel-driver reboot is required when upgrading from v1.3.4; restarting the service or signing out is sufficient. A full reboot is still recommended.
+
+### Verification
+
+- `switcher.log` records `Internal microphone volume capped: 1.00 (30.00 dB) -> 0.70 (5.49 dB)`.
+- Default capture remains *Multiple microphones* for Multimedia, Communications, and Console.
+- Captured float samples stay within `[-1.0, 1.0]`; no out-of-range samples.
+
+**SHA-256:** see the attached `SHA256SUMS.txt`.
 
 ---
 
@@ -33,7 +65,7 @@ Live measurement with v1.3.3 installed (`rt5682saudio 18.5.2.0`) showed that the
 
 ### Important
 
-Test-signed drivers, not WHQL. The ZIP contains only the public `.cer` certificate; the private key is never published. If upgrading from v1.3.3, reboot after installation. Do not publish to GitHub until the headset microphone is validated.
+Test-signed drivers, not WHQL. The ZIP contains only the public `.cer` certificate; the private key is never published. If upgrading from v1.3.3, reboot after installation. This release was published before the headset microphone was validated; v1.3.5 keeps the active fix scoped to the internal DMIC0 array.
 
 ### Verification
 

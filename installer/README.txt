@@ -36,14 +36,17 @@ The installer verifies every signature before trusting the certificate, disables
 the Microsoft vulnerable-driver blocklist (saving the previous value), installs
 the four drivers, and registers the jack/default-endpoint switcher service.
 
-CAPTURE DEFAULT IN v1.3.4
--------------------------
-"Multiple microphones" (the internal DMIC0 array) is now always the default
-capture device. The "Microphone" endpoint for the TRRS jack remains visible for
-diagnosis but is silent on this hardware and is no longer the default.
-If an application was explicitly set to "Microphone", select "Multiple
-microphones" instead. If the recording sounds distorted, lower the Windows
-recording level: the capture endpoint reports +30 dB at 100%.
+CAPTURE IN v1.3.5
+-----------------
+"Multiple microphones" (the internal DMIC0 array) is the default capture device.
+The "Microphone" endpoint for the TRRS jack remains visible for diagnosis but is
+silent on this hardware and is no longer the default. If an application was
+explicitly set to "Microphone", select "Multiple microphones" instead.
+
+The endpoint reports +30 dB at 100%, which made applications see clipped,
+DC-saturated samples. v1.3.5 caps the internal microphone recording level at
+70% (+5.49 dB) on startup and on routing changes. Do not raise the slider back
+to 100%; the switcher restores the safe level on its next pass.
 
 PACKAGE CONTENTS
 ----------------

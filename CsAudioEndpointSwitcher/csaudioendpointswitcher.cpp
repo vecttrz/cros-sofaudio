@@ -20,6 +20,7 @@
 #include <setupapi.h>
 #include <mmdeviceapi.h>
 #include <audiopolicy.h>
+#include <endpointvolume.h>
 #include <initguid.h>                       /* must precede the PKEY header so the key is defined here */
 #include <functiondiscoverykeys_devpkey.h>
 #include <stdio.h>
@@ -32,6 +33,7 @@
 #pragma comment(lib, "setupapi.lib")
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "advapi32.lib")
+#pragma comment(lib, "uuid.lib")
 
 #define SERVICE_NAME TEXT("csaudioswitcher")
 
@@ -384,6 +386,59 @@ static BOOL SetEndpointAsDefault(IPolicyConfig* pConfig, PCWSTR deviceId, PCWSTR
 }
 
 /*
+ * The DMIC0 endpoint is exposed with a +30 dB maximum capture level. At 100%
+ * the driver returns float samples above 1.0 with a large positive DC offset,
+ * so applications clamp the stream to a flat line and the microphone sounds
+ * dead. Cap the endpoint volume to a clean level unless the user has already
+ * chosen a lower one. No kernel binary is modified by this workaround.
+ */
+static const float MIC_ARRAY_SAFE_VOLUME = 0.70f;   /* about +5.5 dB, no clipping */
+static const float MIC_ARRAY_VOLUME_LIMIT = 0.81f;  /* above this, clipping starts */
+
+static void NormalizeMicArrayVolume() {
+    if (!g_MicArrayId[0]) return;
+
+    IMMDeviceEnumerator* pEnum = NULL;
+    HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL,
+                                  __uuidof(IMMDeviceEnumerator), (void**)&pEnum);
+    if (FAILED(hr) || !pEnum) return;
+
+    IMMDevice* pDevice = NULL;
+    if (FAILED(pEnum->GetDevice(g_MicArrayId, &pDevice)) || !pDevice) {
+        pEnum->Release();
+        return;
+    }
+
+    IAudioEndpointVolume* pVolume = NULL;
+    hr = pDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
+                           (void**)&pVolume);
+    if (FAILED(hr) || !pVolume) {
+        pDevice->Release();
+        pEnum->Release();
+        return;
+    }
+
+    float before = 0.0f;
+    float dbBefore = 0.0f;
+    pVolume->GetMasterVolumeLevelScalar(&before);
+    pVolume->GetMasterVolumeLevel(&dbBefore);
+
+    if (before > MIC_ARRAY_VOLUME_LIMIT) {
+        pVolume->SetMasterVolumeLevelScalar(MIC_ARRAY_SAFE_VOLUME, NULL);
+        float after = 0.0f;
+        float dbAfter = 0.0f;
+        pVolume->GetMasterVolumeLevelScalar(&after);
+        pVolume->GetMasterVolumeLevel(&dbAfter);
+        LogMsg(L"[SWITCHER] Internal microphone volume capped: %.2f (%.2f dB) -> %.2f (%.2f dB) to avoid DC/clipping",
+               before, dbBefore, after, dbAfter);
+    }
+
+    pVolume->Release();
+    pDevice->Release();
+    pEnum->Release();
+}
+
+/*
  * Hiding an endpoint tears down every WASAPI session attached to it. That is
  * especially visible in Discord, which keeps a communications stream open.
  * Only hide a routed-away endpoint once all of its sessions have migrated.
@@ -518,6 +573,7 @@ static void ApplyJackState(CSAUDIO_JACK_STATE state) {
         if (g_MicArrayId[0] != L'\0') {
             SetEndpointVisible(pConfig, g_MicArrayId, TRUE, L"Internal Microphone");
             captureRouted = SetEndpointAsDefault(pConfig, g_MicArrayId, L"Internal Microphone");
+            NormalizeMicArrayVolume();
         }
 
         // Never invalidate an active Discord/WASAPI stream. The monitor loop
@@ -547,6 +603,7 @@ static void ApplyJackState(CSAUDIO_JACK_STATE state) {
         if (g_MicArrayId[0] != L'\0') {
             SetEndpointVisible(pConfig, g_MicArrayId, TRUE, L"Internal Microphone");
             SetEndpointAsDefault(pConfig, g_MicArrayId, L"Internal Microphone");
+            NormalizeMicArrayVolume();
         }
 
         if (is4Pole && g_HeadsetMicId[0] != L'\0') {

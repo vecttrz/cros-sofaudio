@@ -3,7 +3,7 @@
 
 > **Credits:** Built upon foundational reverse-engineering and source code by **CoolStar** ([@coolstarorg](https://github.com/coolstar)), creator of `sklhdaudbus` and the `csaudio` architecture.
 
-This guide applies to package `cros-sofaudio-v1.3.4.zip`. Installation takes a few minutes and requires **two reboots**.
+This guide applies to package `cros-sofaudio-v1.3.5.zip`. Installation takes a few minutes and requires **two reboots**.
 
 ---
 
@@ -56,11 +56,13 @@ Get-CimInstance Win32_PnPSignedDriver |
   Select-Object DeviceName,DriverVersion,InfName
 ```
 
-Expected with v1.3.4: `rt5682saudio 18.5.2.0`, `csaudiointcsof 18.4.3.0`, `rt1019audio 18.4.0.0`.
+Expected with v1.3.5: `rt5682saudio 18.5.2.0`, `csaudiointcsof 18.4.3.0`, `rt1019audio 18.4.0.0`. The switcher service is the only component changed in v1.3.5.
 
 ### Capture default
 
 Since v1.3.4, the **internal microphone array** is always the default capture device. Confirm it in **Settings → System → Sound → Input** (it may be labelled *Microphone array* or *Multiple microphones*, depending on the Windows language). If an application such as Discord or Teams was previously set to use the headset *Microphone* explicitly, change it to the internal array.
+
+Since v1.3.5, the switcher also caps the internal microphone recording level at `0.70` (`+5.49 dB`) when the endpoint is above `0.81`. This avoids the `+30 dB` clipping that made applications see a nearly flat, saturated waveform. Do not raise the slider back to 100%; the switcher will restore the safe level on its next pass.
 
 The headset microphone endpoint remains visible for diagnostics but is silent on this hardware. The internal microphone array is the working capture source.
 
@@ -107,7 +109,7 @@ The RT1019P has no I²C volume registers. All gain and attenuation is applied in
 ## 5. Troubleshooting
 
 - If the jack switches in reverse, set `JackActiveLow = 0` and reboot.
-- If the capture level sounds distorted, lower the recording level in Windows. The capture endpoint reports `+30 dB` at 100%, so WASAPI float samples can exceed 1.0.
+- If the capture level sounds distorted, keep the Windows recording slider near `70%`. The underlying endpoint reports `+30 dB` at 100%; v1.3.5 caps it automatically, but manually raising it above `81%` can reintroduce clipping.
 - To disable DSP boot: `reg add HKLM\SOFTWARE\CrosSofAudio /v EnableDspBoot /t REG_DWORD /d 0 /f`
 - If the system fails to boot, enter Safe Mode and run `Uninstall.cmd`.
 - `switcher.log` is written to `C:\ProgramData\CrosSofAudio\switcher.log`.

@@ -2,7 +2,7 @@
 setlocal EnableDelayedExpansion
 
 set "ROOT_DIR=%~dp0"
-set "VERSION=v1.3.4"
+set "VERSION=v1.3.5"
 
 :: Some WDK installations do not register the WindowsKernelModeDriver10.0
 :: platform toolset with Visual Studio. Use the user-writable shim shipped in

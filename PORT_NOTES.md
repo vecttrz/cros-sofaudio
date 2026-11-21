@@ -72,8 +72,8 @@ The remaining risk is Windows support for RTL5682S (jack detection and I²C) and
 - Documentation is maintained in English only: `README.md`, `INSTALL_GUIDE.md`, `installer\README.txt`, and `RELEASE_NOTES.md`.
 - The WDK shim was copied to `build-tools\wdk-msbuild-shim\` and `build.cmd` uses it before the older `..\tools\...` path, so the repository is self-contained.
 - Installer texts that still mentioned "volmar"/"2x RT1019" were corrected to Marasov/CX34 and RT1019P GPIO-only.
-- `package.cmd v1.3.4` generates `dist\cros-sofaudio-v1.3.4\` and `cros-sofaudio-v1.3.4.zip` with `rt5682saudio 18.5.2.0` and the remaining 18.4.x binaries, plus `SHA256SUMS.txt`.
-- Verified ZIP: 38 entries, 0 private keys, 10 signatures verified with `ChromebookAudio.cer`, `VERSION.txt=v1.3.4`.
+- `package.cmd v1.3.5` generates `dist\cros-sofaudio-v1.3.5\` and `cros-sofaudio-v1.3.5.zip` with `rt5682saudio 18.5.2.0` and the remaining 18.4.x binaries, plus `SHA256SUMS.txt`.
+- Verified ZIP: 38 entries, 0 private keys, 10 signatures verified with `ChromebookAudio.cer`, `VERSION.txt=v1.3.5`.
 - The private `.pfx` key stays outside the repository; only the public `.cer` certificate is published.
 
 ---
@@ -113,3 +113,14 @@ The remaining risk is Windows support for RTL5682S (jack detection and I²C) and
 - No `.sys` files were modified: `Rt5682SAudio` remains at `18.5.2.0` and the SSP1/RT1019P speaker pipeline is intact.
 - Added `tests\Test-AudioDefault.cpp` to verify default render/capture endpoints and roles. It also revealed `VolumenScalar=1.0` / `VolumenDb=+30.00` on the capture endpoint, explaining why internal-array floats reach `7.38` (out of range). This behavior was not changed in v1.3.4; lower the Windows recording level if distortion is audible.
 - Documentation is now English-only; the Spanish files and the duplicate `README.en.md` were removed.
+
+---
+
+## Changes in v1.3.5 (21/11/2026)
+
+- Live capture with v1.3.4 installed proved that the DMIC0 stream itself is healthy, but the Windows capture endpoint was at `1.0` / `+30.00 dB`. At that level the float samples had a large positive DC offset (`mean≈2.14`) and peaks above `7.0`; `~89%` of samples were out of range, so applications effectively received a clipped flat line.
+- A sweep confirmed the clean operating point: `0.50` gave `ac_rms≈0.031`, `0.70` gave `ac_rms≈0.066` with no clipping, `0.80` was still clean but had more DC, and `0.90+` clipped again. `0.70` was chosen as the safe automatic level.
+- `csaudioendpointswitcher.cpp`: added `NormalizeMicArrayVolume()` using `IAudioEndpointVolume` on the cached internal-array endpoint ID. It runs after routing on startup and on jack events. If the scalar is above `0.81`, it sets `0.70` and logs the old/new scalar and dB values. Lower user-selected levels are not overridden.
+- Added `endpointvolume.h` and `uuid.lib` to the switcher project/build. No `.sys`, topology, INF, or DriverVer changes were needed; the SSP1/RT1019P speaker pipeline is untouched.
+- Live verification after replacing the service: default capture remained *Multiple microphones* at `0.7000` / `+5.49 dB`; WASAPI capture reported `rms≈1998.5` (`-24.3 dBFS`), peak `14360` (`-7.2 dBFS`), and `0` out-of-range samples.
+- Added local diagnostic helpers under `tests\`: `Set-CaptureVolume.cpp` and `Analyze-Mic.ps1`. They are development tools only and are not copied into the release ZIP.

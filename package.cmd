@@ -2,7 +2,7 @@
 setlocal EnableDelayedExpansion
 
 set "ROOT_DIR=%~dp0"
-set "VERSION=v1.3.4"
+set "VERSION=v1.3.5"
 if not "%~1"=="" set "VERSION=%~1"
 
 set "DIST_DIR=%ROOT_DIR%dist\cros-sofaudio-%VERSION%"
@@ -122,7 +122,7 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo [INFO] Writing SHA256SUMS.txt...
-powershell -NoProfile -Command "$h = (Get-FileHash -LiteralPath '%ZIP_FILE%' -Algorithm SHA256).Hash.ToLowerInvariant(); $name = Split-Path '%ZIP_FILE%' -Leaf; @('# SHA-256 del paquete', ('{0}  {1}' -f $h, $name)) | Set-Content -LiteralPath '%ROOT_DIR%SHA256SUMS.txt' -Encoding ASCII"
+powershell -NoProfile -Command "$h = (Get-FileHash -LiteralPath '%ZIP_FILE%' -Algorithm SHA256).Hash.ToLowerInvariant(); $name = Split-Path '%ZIP_FILE%' -Leaf; @('# SHA-256 checksums', ('{0}  {1}' -f $h, $name)) | Set-Content -LiteralPath '%ROOT_DIR%SHA256SUMS.txt' -Encoding ASCII"
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Failed to write SHA256SUMS.txt!
     exit /b 1
